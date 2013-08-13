@@ -3,6 +3,7 @@ package com.foursquare.fongo.impl;
 import com.mongodb.BasicDBList;
 import com.mongodb.BasicDBObject;
 import com.mongodb.DBObject;
+import com.mongodb.LazyDBObject;
 import com.mongodb.FongoDBCollection;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -10,6 +11,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import org.bson.LazyDBList;
 
 public class Util {
 
@@ -149,7 +152,48 @@ public class Util {
       return clone;
     }
 
+    if (source instanceof LazyDBObject) {
+        BasicDBObject clone = new BasicDBObject();
+        for(Map.Entry<String, Object> entry : ((LazyDBObject)(source)).entrySet()) {
+            clone.put(entry.getKey(), entry.getValue());
+        }
+        return (T) clone;
+    }
+
     throw new IllegalArgumentException("Don't know how to clone: " + source);
+  }
+
+  public static <T extends DBObject> T convertLazy(T source) {
+    if (source == null) {
+      return null;
+    }
+
+    if(source instanceof LazyDBObject) {
+      BasicDBObject clone = new BasicDBObject();
+      for(Map.Entry<String, Object> entry : ((LazyDBObject)(source)).entrySet()) {
+        Object val = entry.getValue();
+        if ((val instanceof LazyDBObject) || (val instanceof LazyDBList)) {
+          clone.put(entry.getKey(), convertLazy((DBObject) val));
+        } else {
+          clone.put(entry.getKey(), val);
+        }
+      }
+      return (T) clone;
+    }
+
+    if(source instanceof LazyDBList) {
+        BasicDBList clone = new BasicDBList();
+      for(Object item : ((LazyDBList) source)) {
+        if (item instanceof DBObject) {
+          clone.add(convertLazy((DBObject) item));
+        } else {
+          clone.add(item);
+        }
+      }
+      return (T) clone;
+    }
+
+    return source;
   }
 
   // When inserting, MongoDB set _id in first place.
@@ -163,8 +207,16 @@ public class Util {
     if (source.containsField(FongoDBCollection.ID_KEY)) {
       newobj.put(FongoDBCollection.ID_KEY, source.get(FongoDBCollection.ID_KEY));
     }
+
+    Set<Map.Entry<String, Object>> entries;
+    if (source instanceof LazyDBObject) {
+      entries = ((LazyDBObject) source).entrySet();
+    } else {
+      entries = (Set<Map.Entry<String, Object>>) source.toMap().entrySet();
+    }
+
     // need to clone the sub obj
-    for (Map.Entry<String, Object> entry : (Set<Map.Entry<String, Object>>) source.toMap().entrySet()) {
+    for (Map.Entry<String, Object> entry : entries) {
       String field = entry.getKey();
       Object val = entry.getValue();
       if (val instanceof BasicDBObject) {

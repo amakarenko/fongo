@@ -155,8 +155,11 @@ public class FongoDBCollection extends DBCollection {
 
 
   @Override
-  public synchronized WriteResult update(DBObject q, DBObject o, boolean upsert, boolean multi, WriteConcern concern,
+  public synchronized WriteResult update(DBObject _q, DBObject _o, boolean upsert, boolean multi, WriteConcern concern,
                                          DBEncoder encoder) throws MongoException {
+
+    DBObject q = Util.convertLazy(_q);
+    DBObject o = Util.convertLazy(_o);
 
     filterLists(q);
     filterLists(o);
@@ -358,8 +361,12 @@ public class FongoDBCollection extends DBCollection {
    * note: decoder, readPref, options are ignored
    */
   @Override
-  synchronized Iterator<DBObject> __find(DBObject ref, DBObject fields, int numToSkip, int batchSize, int limit, int options,
+  synchronized Iterator<DBObject> __find(DBObject _ref, DBObject _fields, int numToSkip, int batchSize, int limit, int options,
                                          ReadPreference readPref, DBDecoder decoder) throws MongoException {
+
+    DBObject ref = Util.convertLazy(_ref);
+    DBObject fields = Util.convertLazy(_fields);
+
     filterLists(ref);
     if (LOG.isDebugEnabled()) {
       LOG.debug("find({}, {}).skip({}).limit({})", new Object[]{ref, fields, numToSkip, limit,});

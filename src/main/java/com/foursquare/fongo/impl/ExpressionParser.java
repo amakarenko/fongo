@@ -5,6 +5,9 @@ import com.mongodb.BasicDBList;
 import com.mongodb.BasicDBObject;
 import com.mongodb.DBObject;
 import com.mongodb.DBRefBase;
+
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -14,6 +17,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -459,12 +464,23 @@ public class ExpressionParser {
         } else {
           for (Object storedValue : storedOption) {
             if (storedValue instanceof List) {
-              if (((List) storedValue).contains(expression)) {
-                return true;
+              for(Object item : ((List) storedValue)) {
+                if(item instanceof Number && expression instanceof Number) {
+                  if(compareNumeric((Number) item, (Number) expression)){
+                    return true;
+                  }
+                } else if(item.equals(expression)) {
+                    return true;
+                }
               }
             } else {
               if (expression == null) {
                 return (storedValue == null);
+              }
+              if(storedValue instanceof Number && expression instanceof Number) {
+                if(compareNumeric((Number) storedValue, (Number) expression)){
+                  return true;
+                }
               }
               if (expression.equals(storedValue)) {
                 return true;
@@ -478,6 +494,61 @@ public class ExpressionParser {
     };
   }
 
+  public boolean compareNumeric(Number x, Number y) {
+
+    if(isInteger(x) && isInteger(y)) {
+      long longX = x.longValue();
+      long longY = y.longValue();
+      return longX == longY;
+    }
+
+    if((isFractional(x) || isInteger(x) ) && (isFractional(y) || isInteger(y))) {
+      double doubleX = x.doubleValue();
+      double doubleY = y.doubleValue();
+      return Math.abs(doubleX - doubleY) < 0.0000001;
+    }
+
+    if(x instanceof BigDecimal) {
+      BigDecimal bigY = toBigDecimal(y);
+      return x.equals(bigY);
+    }
+
+    if(x instanceof BigInteger) {
+      BigInteger bigY= toBigInteger(y);
+      return x.equals(bigY);
+    }
+
+    return false;
+  }
+
+  static BigDecimal toBigDecimal(Number n) {
+    if(n instanceof BigDecimal) {
+      return  (BigDecimal) n;
+    } else if (n instanceof BigInteger){
+      return new BigDecimal((BigInteger)n);
+    } else {
+      return BigDecimal.valueOf(n.doubleValue());
+    }
+  }
+
+  static BigInteger toBigInteger(Number n) {
+    if(n instanceof BigInteger) {
+      return  (BigInteger) n;
+    } else if (n instanceof BigDecimal){
+      return  ((BigDecimal)n).toBigInteger();
+    } else {
+      return BigInteger.valueOf(n.longValue());
+    }
+  }
+
+  static boolean isInteger(Number n) {
+    return n instanceof Byte || n instanceof Short || n instanceof Integer || n instanceof Long
+                || n instanceof AtomicInteger || n instanceof AtomicLong;
+  }
+
+  static boolean isFractional(Number n) {
+    return n instanceof Float || n instanceof Double;
+  }
 
   @SuppressWarnings("all")
   public int compareObjects(Object queryValue, Object storedValue) {
@@ -495,7 +566,29 @@ public class ExpressionParser {
       if (storedComp == null) {
         return 1;
       }
-      return queryComp.compareTo(storedComp);
+      if(queryComp instanceof Number && storedComp instanceof Number) {
+        if(queryComp instanceof BigDecimal) {
+            return ((BigDecimal) queryComp).compareTo(toBigDecimal((Number) storedComp));
+        }
+        if(storedComp instanceof BigDecimal) {
+            return ((BigDecimal) storedComp).compareTo(toBigDecimal((Number) queryComp));
+        }
+        if(queryComp instanceof BigInteger) {
+            return ((BigInteger) queryComp).compareTo(toBigInteger((Number) storedComp));
+        }
+        if(storedComp instanceof BigInteger) {
+            return ((BigInteger) storedComp).compareTo(toBigInteger((Number) queryComp));
+        }
+        if(isFractional((Number) queryComp)) {
+            Double.compare(((Number) queryComp).doubleValue(), ((Number) storedComp).doubleValue());
+        }
+        if(isFractional((Number) storedComp)) {
+            Double.compare(((Number) queryComp).doubleValue(), ((Number) storedComp).doubleValue());
+        }
+        return (int) (((Number) queryComp).longValue() - ((Number) storedComp).longValue()); // todo fix long comparison
+      } else {
+        return queryComp.compareTo(storedComp);
+      }
     }
   }
 

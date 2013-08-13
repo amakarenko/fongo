@@ -12,3 +12,4 @@ target
 .settings
 test-output
 bin
+atlassian-ide-plugin.xml
