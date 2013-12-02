@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.foursquare</groupId>
   <artifactId>fongo</artifactId>
-  <version>1.2.1-SNAPSHOT</version>
+  <version>1.2.1.GFACE-SNAPSHOT</version>
   <name>fongo</name>
   <description>Fake in-memory mongo</description>
   <url>https://github.com/foursquare/fongo</url>
@@ -13,11 +13,16 @@
       <distribution>repo</distribution>
     </license>
   </licenses>
-  <scm>
-    <connection>scm:git:git@github.com:foursquare/fongo.git</connection>
-    <developerConnection>scm:git:git@github.com:foursquare/fongo.git</developerConnection>
-    <url>git@github.com:foursquare/fongo.git</url>
-  </scm>
+  <distributionManagement>
+        <repository>
+            <id>gface</id>
+            <url>http://maven.dev2.gface.de/content/repositories/releases</url>
+        </repository>
+        <snapshotRepository>
+            <id>gface</id>
+            <url>http://maven.dev2.gface.de/content/repositories/snapshots</url>
+        </snapshotRepository>
+  </distributionManagement>
   <developers>
     <developer>
       <id>hoffrocket</id>

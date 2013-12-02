@@ -1,10 +1,7 @@
 package com.foursquare.fongo.impl;
 
 import com.foursquare.fongo.FongoException;
-import com.mongodb.BasicDBList;
-import com.mongodb.BasicDBObject;
-import com.mongodb.DBObject;
-import com.mongodb.DBRefBase;
+import com.mongodb.*;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -42,6 +39,7 @@ public class ExpressionParser {
   public final static String AND = "$and";
   public final static String REGEX = "$regex";
   public final static String REGEX_OPTIONS = "$options";
+  public final static String ELEM_MATCH = QueryOperators.ELEM_MATCH;
 
   public class ObjectComparator implements Comparator {
     private final int asc;
@@ -285,6 +283,24 @@ public class ExpressionParser {
           }
 
           return true;
+        }
+      },
+      new BasicFilterFactory(ELEM_MATCH) {
+        boolean compare(Object queryValue, Object storedValue) {
+          DBObject query = typecast(command + " clause", queryValue, DBObject.class);
+          List storedList = typecast("value", storedValue, List.class);
+          if (storedList == null) {
+            return false;
+          }
+
+          Filter filter = buildFilter(query);
+          for (Object object : storedList) {
+            if (filter.apply((DBObject) object)) {
+              return true;
+            }
+          }
+
+          return false;
         }
       },
       new BasicCommandFilterFactory(EXISTS) {
