@@ -181,7 +181,11 @@ public class FongoDBCollection extends DBCollection {
         o.put(ID_KEY, q.get(ID_KEY));
       }
       List<DBObject> oldObjects = _idIndex.get(o);
-      addToIndexes(o, oldObjects == null ? null : oldObjects.get(0), concern);
+      DBObject existing = oldObjects == null ? null : oldObjects.get(0);
+      addToIndexes(o, existing, concern);
+      if (existing != null) {
+        updatedExisting = true;
+      }
       updatedDocuments++;
     } else {
       Filter filter = expressionParser.buildFilter(q);
