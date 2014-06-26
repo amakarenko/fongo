@@ -168,7 +168,9 @@ public class FongoDBCollection extends DBCollection {
       LOG.debug("update(" + q + ", " + o + ", " + upsert + ", " + multi + ")");
     }
 
-    if (o.containsField(ID_KEY) && q.containsField(ID_KEY) && !o.get(ID_KEY).equals(q.get(ID_KEY))) {
+    if (o.containsField(ID_KEY) && q.containsField(ID_KEY) &&
+            // calling toString() to avoid comparing String with ObjectId
+            !o.get(ID_KEY).toString().equals(q.get(ID_KEY).toString())  ) {
       throw new MongoException.DuplicateKey(fongoDb.koErrorResult(0, "can not change _id of a document " + ID_KEY));
     }
 
